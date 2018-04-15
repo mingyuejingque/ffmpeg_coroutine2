@@ -19,6 +19,7 @@ static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt, cons
 static bool open_input_file(ff_context* ctx);
 static bool open_output_file(ff_context* ctx);
 static bool handle_frame_data(ff_context* ctx);
+static void print_sdp(ff_context* ctx);
 
 struct ff_context {
     AVFifoBuffer* fifo;
@@ -67,12 +68,12 @@ void fill_data_to_ffmpeg(ff_context* ctx, uint8_t* data, int size) {
         }
         int will_write = FFMIN(size, space);
         av_fifo_generic_write(ctx->fifo, data, will_write, nullptr);
-        fprintf(stderr, "%s write 0x%x bytes to fifo\n", __func__, will_write);
+        //fprintf(stderr, "%s write 0x%x bytes to fifo\n", __func__, will_write);
     }
 }
 
 void resume_ffmpeg(my_pull_type &pull, ff_context* ctx) {
-    fprintf(stderr, "%s called.\n", __func__);
+    //fprintf(stderr, "%s called.\n", __func__);
     ctx->pull = &pull;
     handle_frame_data(ctx);
 }
@@ -82,7 +83,7 @@ int avio_read_packet(void* opaque, uint8_t* buf, int size) {
     ff_context* ctx = (ff_context*)opaque;
     int will_read = FFMIN(size, av_fifo_size(ctx->fifo));
     while (!will_read && !g_exit) {
-        fprintf(stderr, "%s yield\n", __func__);
+        //fprintf(stderr, "%s yield\n", __func__);
         (*ctx->pull)();
         will_read = FFMIN(size, av_fifo_size(ctx->fifo));
     }
@@ -90,7 +91,7 @@ int avio_read_packet(void* opaque, uint8_t* buf, int size) {
     if (will_read == 0)
         return AVERROR_EOF;
     av_fifo_generic_read(ctx->fifo, buf, will_read, nullptr);
-    fprintf(stderr, "%s read: 0x%x\n", __func__, will_read);
+    //fprintf(stderr, "%s read: 0x%x\n", __func__, will_read);
     return will_read;
 }
 
@@ -130,7 +131,7 @@ bool uninit_ffmpeg(ff_context* context) {
 
     if (ctx->has_probe_output && ctx->ofmt_ctx) {
         av_write_trailer(ctx->ofmt_ctx);
-        fprintf(stderr, "av_write_trailer.\n");
+        //fprintf(stderr, "av_write_trailer.\n");
         if (ctx->ofmt_ctx && !(ctx->ofmt->flags & AVFMT_NOFILE)) {
             avio_closep(&ctx->ofmt_ctx->pb);
             avformat_free_context(ctx->ofmt_ctx);
@@ -155,7 +156,7 @@ bool stop_ffmpeg() {
 
 static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt, const char *tag)
 {
-#if 1
+#if 0
     AVRational *time_base = &fmt_ctx->streams[pkt->stream_index]->time_base;
     fprintf(stderr, "%s: [timebase %d/%d] pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s stream_index:%d\n",
            tag,
@@ -243,12 +244,15 @@ static bool open_output_file(struct ff_context* ctx) {
         }
     }
 
+	if (strncmp("rtp", ctx->output_format, 3) == 0) {
+		print_sdp(ctx);
+	}
     return true;
 }
 
 
 static bool handle_frame_data(ff_context* ctx) {
-    fprintf(stderr, "%s called.\n", __func__);
+    //fprintf(stderr, "%s called.\n", __func__);
     int ret = 0;
     if (!ctx->has_probe_input) {
         ret = open_input_file(ctx);
@@ -311,4 +315,12 @@ static bool handle_frame_data(ff_context* ctx) {
         }
     }
     return ret;
+}
+
+static void print_sdp(ff_context* ctx)
+{
+    char sdp[16384];
+    AVFormatContext *avc[1] = { ctx->ofmt_ctx };
+    av_sdp_create(avc, 1, sdp, sizeof(sdp));
+	fprintf(stderr, "%s\n", sdp);
 }

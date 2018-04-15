@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     my_push_type push(std::bind(resume_ffmpeg, std::placeholders::_1, ctx));
     while(1) {
         //do_some_thing_
-        fprintf(stderr, "\nmain.loop begin\n");
+        //fprintf(stderr, "\nmain.loop begin\n");
         
         { //get_some_media_data;
             len = fread(buffer, 1, sizeof(buffer), fp);
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
 
         //do_some_thing
         usleep(40 * 1000);
-        fprintf(stderr, "main.loop end\n");
+        //fprintf(stderr, "main.loop end\n");
     }
 
     uninit_ffmpeg(ctx);
