@@ -23,7 +23,7 @@ typedef boost::coroutines2::coroutine<void>::pull_type my_pull_type;
 
 struct ff_context;
 
-bool init_ffmpeg(ff_context** context);
+bool init_ffmpeg(ff_context** context, const char* output_file, const char* output_format);
 bool stop_ffmpeg();
 bool uninit_ffmpeg(ff_context* context);
 

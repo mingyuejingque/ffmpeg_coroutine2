@@ -3,7 +3,7 @@
 #include "muxing.h"
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
+    if (argc < 4) {
         printf("usage: %s <input_file_name>\n", argv[0]);
         return 0;
     }
@@ -15,18 +15,18 @@ int main(int argc, char* argv[]) {
     }
 
     ff_context *ctx = nullptr;
-    init_ffmpeg(&ctx);
+    init_ffmpeg(&ctx, argv[2], argv[3]);
     if (!ctx) {
         printf("init ffmpeg faild\n");
         return 0;
     }
 
     int len = 0;
-    static char buffer[4096];
+    static char buffer[32 * 1024];
     my_push_type push(std::bind(resume_ffmpeg, std::placeholders::_1, ctx));
     while(1) {
         //do_some_thing_
-        printf("\nmain.loop begin\n");
+        fprintf(stderr, "\nmain.loop begin\n");
         
         { //get_some_media_data;
             len = fread(buffer, 1, sizeof(buffer), fp);
@@ -43,7 +43,8 @@ int main(int argc, char* argv[]) {
         push();
 
         //do_some_thing
-        printf("main.loop end\n");
+        usleep(40 * 1000);
+        fprintf(stderr, "main.loop end\n");
     }
 
     uninit_ffmpeg(ctx);
